@@ -1,0 +1,10 @@
+{
+    "python.linting.flake8Args": [
+        "--ignore=E501"
+    ],
+    "python.testing.pytestArgs": [
+        "."
+    ],
+    "python.testing.unittestEnabled": false,
+    "python.testing.pytestEnabled": true
+}
