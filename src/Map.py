@@ -70,8 +70,6 @@ class Map:
                 self.downcolumn.append(col - 1)
             if col + 1 in self.roadcolumn:
                 self.upcolumn.append(col + 1)
-        print(self.cross)
-        input()
         return (self.roadrow, self.roadcolumn, self.cross, self.leftrow, self.rightrow, self.downcolumn, self.upcolumn)
 
     def navigate_car_to_dest(self, car, dest_x, dest_y):
@@ -112,6 +110,15 @@ class Map:
         # 不会触发 已经重写停车场内逻辑
         if self.layout.iloc[x, y] != 0:
             print("车辆在停车位内")
+            x, y = self.get_closest_road(x, y)
+            if x < car.x:
+                car.direction = 1
+            elif x > car.x:
+                car.direction = 2
+            elif y < car.y:
+                car.direction = 3
+            elif y > car.y:
+                car.direction = 4
         else:
             if (x, y) in self.cross:
                 # if (pre_x,pre_y) in cross:

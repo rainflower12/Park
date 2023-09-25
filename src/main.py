@@ -1,7 +1,6 @@
 from Car import Car
 from Map import Map
 import os
-import threading
 
 
 def create_map() -> Map:
@@ -13,10 +12,10 @@ def create_map() -> Map:
 
 
 def sigle_car_test(map: Map):
-    car_x = 0
-    car_y = 0
+    car_x = 2
+    car_y = 16
     car = Car(car_x, car_y, map)
-    dest_x = 5
+    dest_x = 11
     dest_y = 16
     car.move(dest_x, dest_y)
 
@@ -32,6 +31,7 @@ def mul_car_test(map: Map):
         car_thread.get_dest(dest_x, dest_y)
         car_thread.start()
         car_threads.append(car_thread)
+        map.cars.append(car_thread)
     for car_thread in car_threads:
         car_thread.join()
     print("All cars have arrived at the destination.")
@@ -39,4 +39,4 @@ def mul_car_test(map: Map):
 
 if __name__ == "__main__":
     map = create_map()
-    mul_car_test(map)
+    sigle_car_test(map)
