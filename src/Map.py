@@ -19,6 +19,8 @@ class Map:
     def get_parking_space_weight_height(self) -> tuple:
         """
         Get the weight and height of a parking space
+        Returns:
+            tuple: the weight and height of a parking space
         """
         for i in range(len(self.layout)):
             for j in range(len(self.layout.iloc[i])):
@@ -43,6 +45,8 @@ class Map:
     def identify_road_and_cross(self) -> tuple:
         """
         Extract the layout of the road network
+        Returns:
+            tuple: the message of the layout of the road network
         """
         self.roadrow = []
         self.roadcolumn = []
