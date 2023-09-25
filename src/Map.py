@@ -14,6 +14,7 @@ class Map:
         self.rightrow = None
         self.downcolumn = None
         self.upcolumn = None
+        self.cars = []
 
     def get_parking_space_weight_height(self) -> tuple:
         """
@@ -80,7 +81,6 @@ class Map:
             param car: Car object
             param dest_x: destination x coordinate
             param dest_y: destination y coordinate
-            param file_path: path to the layout file
         """
 
         if (self.weight is None) or (self.height is None):
@@ -93,24 +93,8 @@ class Map:
             (self.downcolumn is None) or \
                 (self.upcolumn is None):
             self.identify_road_and_cross()
-        if (self.layout.iloc[dest_x, dest_y] == 1):
-            temp_dest_x, temp_dest_y = self.get_closest_road(dest_x, dest_y)
-            # print(temp_dest_x, temp_dest_y)
-            # input()
-        else:
-            temp_dest_x, temp_dest_y = dest_x, dest_y
-        while car.x != temp_dest_x or car.y != temp_dest_y:
-            self.assign_car_direction(car, dest_x, dest_y)
-            car.move()
-            car.show_position()
-        if (temp_dest_x, temp_dest_y) == (dest_x, dest_y):
-            print()
-            print("Destination reached!")
-        else:
-            dest = (dest_x, dest_y)
-            print(dest)
-            print()
-            print("Parking reached!")
+
+        self.assign_car_direction(car, dest_x, dest_y)
 
     def assign_car_direction(self, car, dest_x, dest_y):
         """
@@ -125,6 +109,7 @@ class Map:
         # pre_x = car.pre_x
         # pre_y = car.pre_y
 
+        # 不会触发 已经重写停车场内逻辑
         if self.layout.iloc[x, y] != 0:
             print("车辆在停车位内")
         else:
@@ -133,8 +118,6 @@ class Map:
                 # car.direction=car.pre_direction
                 # print("cuo10")
                 # else:
-                print("go cross")
-                input()
                 self.cross_direction(car, dest_x, dest_y)
             elif x in self.leftrow:
                 car.direction = 3  # Move left

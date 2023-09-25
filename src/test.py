@@ -277,3 +277,41 @@
 # result = nearest_zeros(matrix)
 # for row in result:
 #     print(row)
+
+# import requests, threading
+
+# urls = [
+#     f"https://www.cnblogs.com/#p{page}"
+#     for page in range(1, 50 + 1)
+# ]
+
+
+# def craw(url):
+#     r = requests.get(url)
+#     print(url, len(r.text))
+
+
+# def sigle_thread():
+#     print("single thread begin")
+#     for url in urls:
+#         craw(url)
+#     print("single thread end")
+
+
+# def multi_thread():
+#     print("multi thread begin")
+#     threads = []
+#     for url in urls:
+#         threads.append(threading.Thread(target=craw, args=(url,)))
+#     for thread in threads:
+#         thread.start()
+#     for thread in threads:
+#         thread.join()
+#     print("multi thread end")
+
+
+# sigle_thread()
+# multi_thread()
+
+
+# Pipeline 架构
