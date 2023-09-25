@@ -1,5 +1,5 @@
 class Car:
-    def __init__(self, x, y, pre_x, pre_y, direction, pre_direction):
+    def __init__(self, x, y, pre_x=0, pre_y=0, direction=0, pre_direction=0):
         """
         Initialize the car object
         Args:
@@ -22,20 +22,20 @@ class Car:
         Move the car
         """
         if self.direction == 1:  # Move up
-            self.pre_x = self.x
-            self.pre_y = self.y
+            # self.pre_x = self.x
+            # self.pre_y = self.y
             self.x -= 1
         elif self.direction == 2:  # Move down
-            self.pre_x = self.x
-            self.pre_y = self.y
+            # self.pre_x = self.x
+            # self.pre_y = self.y
             self.x += 1
         elif self.direction == 3:  # Move left
-            self.pre_x = self.x
-            self.pre_y = self.y
+            # self.pre_x = self.x
+            # self.pre_y = self.y
             self.y -= 1
         elif self.direction == 4:  # Move right
-            self.pre_x = self.x
-            self.pre_y = self.y
+            # self.pre_x = self.x
+            # self.pre_y = self.y
             self.y += 1
         else:
             print(self.direction)
