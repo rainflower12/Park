@@ -65,6 +65,7 @@ poetry export -f requirements.txt --output requirements.txt
 
 推荐使用 Flake8 进行代码检查，但以下规则应当被抑制：
 - `E501` 代码单行长度限制
+- `W503` 二元运算符前换行
 
 ## 单元测试说明
 暂时未完成

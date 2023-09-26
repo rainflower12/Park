@@ -1,10 +1,19 @@
 {
     "python.linting.flake8Args": [
-        "--ignore=E501"
+        "--ignore=E501,W503"
     ],
     "python.testing.pytestArgs": [
         "."
     ],
     "python.testing.unittestEnabled": false,
-    "python.testing.pytestEnabled": true
+    "python.testing.pytestEnabled": true,
+    "window.zoomLevel": 0,
+    "todo-tree.tree.showScanModeButton": false,
+    "todohighlight.keywords": [
+        {
+            "text": "TODO",
+            "color": "#faa2c1",
+            "backgroundColor": "",
+        }
+    ]
 }
