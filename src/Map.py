@@ -214,3 +214,23 @@ class Map:
             elif self.layout.iloc[dest_x, dest_y + i] == 0:
                 return (dest_x, dest_y + i)
             i += 1
+
+    def get_closest_parking(self, target_x, target_y) -> tuple:
+        """
+        Get the closest parking to the target
+            x : target x coordinate
+            y : target y coordinate
+        Returns:
+            tuple: the closest parking (x,y) to the target (target_x,target_y)
+        """
+        i = 1
+        while True:
+            if self.layout.iloc[target_x, target_y - i] == 1:
+                return (target_x, target_y - i)
+            elif self.layout.iloc[target_x, target_y + i] == 1:
+                return (target_x, target_y + i)
+            elif self.layout.iloc[target_x - i, target_y] == 1:
+                return (target_x - i, target_y)
+            elif self.layout.iloc[target_x + i, target_y] == 1:
+                return (target_x + i, target_y)
+            i += 1

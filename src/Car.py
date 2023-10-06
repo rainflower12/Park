@@ -5,7 +5,7 @@ import sys
 
 
 class Car(threading.Thread):
-    def __init__(self, x, y, map: Map, pre_x=0, pre_y=0, direction=0, pre_direction=0):
+    def __init__(self, x, y, map: Map, stage=1, pre_x=0, pre_y=0, direction=0, pre_direction=0):
         """
         Initialize the car object
         Args:
@@ -27,6 +27,8 @@ class Car(threading.Thread):
         self.pre_direction = pre_direction
         self.flag = 1
         self.pass_road = []
+        self.index = 0
+        self.stage = stage
         Car.lock = threading.Lock()
 
     def get_dest(self, dest_x, dest_y):
@@ -72,26 +74,28 @@ class Car(threading.Thread):
         if self.flag == 1:
             # 目的地是停车场
             if (self.map.layout.iloc[dest_x, dest_y] == 1):
-                temp_dest_x, temp_dest_y = self.map.get_closest_road(dest_x, dest_y)
+                self.temp_dest_x, self.temp_dest_y = self.map.get_closest_road(dest_x, dest_y)
             else:
-                temp_dest_x, temp_dest_y = dest_x, dest_y
-            while self.x != temp_dest_x or self.y != temp_dest_y:
-                self.map.navigate_car_to_dest(self, temp_dest_x, temp_dest_y)
+                self.temp_dest_x, self.temp_dest_y = dest_x, dest_y
+            while self.x != self.temp_dest_x or self.y != self.temp_dest_y:
                 while True:
+                    self.map.navigate_car_to_dest(self, self.temp_dest_x, self.temp_dest_y)
                     if self.check_collision() is False:
-                        # print(self.x, self.y, self.direction)
+                        print(self.x, self.y, self.direction)
                         self.drive()
                         self.add_position()
                         break
                     time.sleep(1)
             # 到达目的地退出
-            if (temp_dest_x, temp_dest_y) == (dest_x, dest_y):
+            if (self.temp_dest_x, self.temp_dest_y) == (dest_x, dest_y):
                 with self.lock:
                     print(str(threading.get_ident()) + " Destination reached!")
                     self.flag = 0
                     print("The car pass the road is:", end=" ")
                     print(self.pass_road)
-                    sys.exit()
+                    self.stage -= 1
+                    if self.stage == 0:
+                        sys.exit()
             else:
                 if dest_x < self.x:
                     self.direction = 1
@@ -112,10 +116,11 @@ class Car(threading.Thread):
                             self.flag = 0
                             print("The car pass the road is:", end=" ")
                             print(self.pass_road)
-                            sys.exit()
+                            self.stage -= 1
+                            if self.stage == 0:
+                                sys.exit()
         else:
             print("car stop")
-            sys.exit()
 
     def check_collision(self) -> bool:
         """
@@ -147,28 +152,40 @@ class Car(threading.Thread):
                 if ((car.x, car.y) == (self.ahead_x, self.ahead_y) and car.flag == 0):
                     # 前车到达目的地,并且在我必经之路上,尝试超车
                     # 位置是否支持超车
+                    # if (self.map.layout.iloc[car.x, car.y] == 1):
+                    #     # 必经之路有停车场 不支持超车 直接抛锚在当前位置, 路线错误
+                    #     self.flag = 0
+                    #     with self.lock:
+                    #         print("Parking has the car")
+                    #         print(str(threading.get_ident()) + " Unable to overtake and forced to stop!")
+                    #         self.flag = 0
+                    #         print("The car pass the road is:", end=" ")
+                    #         print(self.pass_road)
+                    #         sys.exit()
+                    # else:
+                    #     if (self.try_overtake(car.x, car.y) is True):
+                    #         return False
+                    #     elif (self.try_overtake(car.x, car.y) is False):
+                    #         # 无可走路径 报错
+                    #         with self.lock:
+                    #             print("No way to drive")
+                    #             print(str(threading.get_ident()) + " Unable to overtake and forced to stop!")
+                    #             self.flag = 0
+                    #             print("The car pass the road is:", end=" ")
+                    #             print(self.pass_road)
+                    #             sys.exit()
                     if (self.map.layout.iloc[car.x, car.y] == 1):
-                        # 必经之路有停车场 不支持超车 直接抛锚在当前位置, 路线错误
-                        self.flag = 0
-                        with self.lock:
-                            print("Parking has the car")
-                            print(str(threading.get_ident()) + " Unable to overtake and forced to stop!")
-                            self.flag = 0
-                            print("The car pass the road is:", end=" ")
-                            print(self.pass_road)
-                            sys.exit()
-                    else:
-                        if (self.try_overtake(car.x, car.y) is True):
-                            return False
-                        elif (self.try_overtake(car.x, car.y) is False):
-                            # 无可走路径 报错
-                            with self.lock:
-                                print("No way to drive")
-                                print(str(threading.get_ident()) + " Unable to overtake and forced to stop!")
-                                self.flag = 0
-                                print("The car pass the road is:", end=" ")
-                                print(self.pass_road)
-                                sys.exit()
+                        self.dest_x, self.dest_y = self.map.get_closest_parking(car.x, car.y)
+                        self.temp_dest_x, self.temp_dest_y = self.map.get_closest_road(self.dest_x, self.dest_y)
+                        # print(self.temp_dest_x, self.temp_dest_y)
+                        return True
+                    elif (self.map.layout.iloc[car.x, car.y] == 0):
+                        if (car.flag == 0):
+                            # 唯一超车位置
+                            self.try_overtake(car.x, car.y)
+                            return True
+                        else:
+                            return True
         return False
 
     def try_overtake(self, car_x, car_y):
@@ -179,168 +196,151 @@ class Car(threading.Thread):
         """
         if self.direction == 1:
             # 寻找可超越路径
-            i = 1
-            while (i < 2):
-                has_car = 0
-                target_x = car_x - i
-                target_y = car_y
-                across_x = self.x
-                across_y = self.y
-                for car in self.map.cars:
-                    if (car.x, car.y) == (target_x, target_y):
-                        i += 1
-                        has_car = 1
-                        break
-                if (has_car):
-                    continue
-                across_y -= 1
-                for car in self.map.cars:
-                    for j in range(i + 2):
-                        if (car.x, car.y) == (across_x - j, across_y):
-                            has_car = 1
-                            break
-                if (has_car):
-                    continue
-                # 车辆开动
-                if (self.map.get_distance(across_x - i - 1, across_y + 1, self.dest_x, self.dest_y)
-                        < self.map.get_distance(self.x, self.y, self.dest_x, self.dest_y)):
-                    for j in range(i + 2):
-                        self.x = across_x - j
-                        self.y = across_y
-                        temp = (self.x, self.y)
-                        self.pass_road.append(temp)
-                    self.x = across_x - i - 1
-                    self.y = across_y + 1
-                    temp = (self.x, self.y)
-                    self.pass_road.append(temp)
-                    print("overtake")
-                    return True
-                else:
-                    return False
+            has_car = 0
+            target_x = car_x - 1
+            target_y = car_y
+            across_x = self.x - 1
+            across_y = self.y - 1
+            for car in self.map.cars:
+                if (car.x, car.y) == (target_x, target_y):
+                    has_car = 1
+            if (has_car):
+                return False
+            for car in self.map.cars:
+                if (car.x, car.y) == (across_x, across_y):
+                    has_car = 1
+                    break
+            if (has_car):
+                return False
+            # 可以超车
+            if (self.map.get_distance(target_x, target_y, self.dest_x, self.dest_y)
+                    < self.map.get_distance(self.x, self.y, self.dest_x, self.dest_y)):
+                self.x = across_x
+                self.y = across_y
+                temp = (self.x, self.y)
+                self.pass_road.append(temp)
+                self.x = target_x
+                self.y = target_y
+                temp = (self.x, self.y)
+                self.pass_road.append(temp)
+                return True
+            else:
+                return False
         elif self.direction == 2:
-            i = 1
-            while (i < 2):
-                has_car = 0
-                target_x = car_x + i
-                target_y = car_y
-                across_x = self.x
-                across_y = self.y
-                for car in self.map.cars:
-                    if (car.x, car.y) == (target_x, target_y):
-                        i += 1
-                        has_car = 1
-                        break
-                if (has_car):
-                    continue
-                across_y += 1
-                for car in self.map.cars:
-                    for j in range(i + 2):
-                        if (car.x, car.y) == (across_x + j, across_y):
-                            has_car = 1
-                            break
-                if (has_car):
-                    continue
-                # 车辆开动
-                if (self.map.get_distance(across_x + i + 1, across_y - 1, self.dest_x, self.dest_y)
-                        < self.map.get_distance(self.x, self.y, self.dest_x, self.dest_y)):
-                    for j in range(i + 2):
-                        self.x = across_x + j
-                        self.y = across_y
-                        temp = (self.x, self.y)
-                        self.pass_road.append(temp)
-                    self.x = across_x + i + 1
-                    self.y = across_y - 1
-                    temp = (self.x, self.y)
-                    self.pass_road.append(temp)
-                    print("overtake")
-                    return True
-                else:
-                    return False
+            has_car = 0
+            target_x = car_x + 1
+            target_y = car_y
+            across_x = self.x + 1
+            across_y = self.y + 1
+            for car in self.map.cars:
+                if (car.x, car.y) == (target_x, target_y):
+                    has_car = 1
+                    break
+            if (has_car):
+                return False
+            for car in self.map.cars:
+                if (car.x, car.y) == (across_x, across_y):
+                    has_car = 1
+                    break
+            if (has_car):
+                return False
+            # 可以超车
+            if (self.map.get_distance(target_x, target_y, self.dest_x, self.dest_y)
+                    < self.map.get_distance(self.x, self.y, self.dest_x, self.dest_y)):
+                self.x = across_x
+                self.y = across_y
+                temp = (self.x, self.y)
+                self.pass_road.append(temp)
+                self.x = target_x
+                self.y = target_y
+                temp = (self.x, self.y)
+                self.pass_road.append(temp)
+                return True
+            else:
+                return False
         elif self.direction == 3:
-            i = 1
-            while (i < 2):
-                has_car = 0
-                target_x = car_x
-                target_y = car_y - i
-                across_x = self.x
-                across_y = self.y
-                for car in self.map.cars:
-                    if (car.x, car.y) == (target_x, target_y):
-                        i += 1
-                        has_car = 1
-                        break
-                if (has_car):
-                    continue
-                across_x += 1
-                for car in self.map.cars:
-                    for j in range(i + 2):
-                        if (car.x, car.y) == (across_x, across_y - j):
-                            has_car = 1
-                            break
-                if (has_car):
-                    continue
-                # 车辆开动
-                if (self.map.get_distance(across_x - 1, across_y - i - 1, self.dest_x, self.dest_y)
-                        < self.map.get_distance(self.x, self.y, self.dest_x, self.dest_y)):
-                    for j in range(i + 2):
-                        self.x = across_x
-                        self.y = across_y - j
-                        temp = (self.x, self.y)
-                        self.pass_road.append(temp)
-                    self.x = across_x - 1
-                    self.y = across_y - i - 1
-                    temp = (self.x, self.y)
-                    self.pass_road.append(temp)
-                    print("overtake")
-                    return True
-                else:
-                    return False
+            has_car = 0
+            target_x = car_x
+            target_y = car_y - 1
+            across_x = self.x + 1
+            across_y = self.y - 1
+            for car in self.map.cars:
+                if (car.x, car.y) == (target_x, target_y):
+                    has_car = 1
+                    break
+            if (has_car):
+                return False
+            for car in self.map.cars:
+                if (car.x, car.y) == (across_x, across_y):
+                    has_car = 1
+                    break
+            if (has_car):
+                return False
+            # 可以超车
+            if (self.map.get_distance(target_x, target_y, self.dest_x, self.dest_y)
+                    < self.map.get_distance(self.x, self.y, self.dest_x, self.dest_y)):
+                self.x = across_x
+                self.y = across_y
+                temp = (self.x, self.y)
+                self.pass_road.append(temp)
+                self.x = target_x
+                self.y = target_y
+                temp = (self.x, self.y)
+                self.pass_road.append(temp)
+                return True
+            else:
+                return False
         elif self.direction == 4:
-            i = 1
-            while (i < 2):
-                has_car = 0
-                target_x = car_x
-                target_y = car_y + i
-                across_x = self.x
-                across_y = self.y
-                for car in self.map.cars:
-                    if (car.x, car.y) == (target_x, target_y):
-                        i += 1
-                        has_car = 1
-                        break
-                if (has_car):
-                    continue
-                across_x -= 1
-                for car in self.map.cars:
-                    for j in range(i + 2):
-                        if (car.x, car.y) == (across_x, across_y + j):
-                            has_car = 1
-                            break
-                if (has_car):
-                    continue
-                # 车辆开动
-                if (self.map.get_distance(across_x + 1, across_y + i + 1, self.dest_x, self.dest_y)
-                        < self.map.get_distance(self.x, self.y, self.dest_x, self.dest_y)):
-                    for j in range(i + 2):
-                        self.x = across_x
-                        self.y = across_y + j
-                        temp = (self.x, self.y)
-                        self.pass_road.append(temp)
-                    self.x = across_x + 1
-                    self.y = across_y + i + 1
-                    temp = (self.x, self.y)
-                    self.pass_road.append(temp)
-                    print("overtake")
-                    return True
-                else:
-                    return False
+            has_car = 0
+            target_x = car_x
+            target_y = car_y + 1
+            across_x = self.x - 1
+            across_y = self.y + 1
+            for car in self.map.cars:
+                if (car.x, car.y) == (target_x, target_y):
+                    has_car = 1
+                    break
+            if (has_car):
+                return False
+            for car in self.map.cars:
+                if (car.x, car.y) == (across_x, across_y):
+                    has_car = 1
+                    break
+            if (has_car):
+                return False
+            # 可以超车
+            if (self.map.get_distance(target_x, target_y, self.dest_x, self.dest_y)
+                    < self.map.get_distance(self.x, self.y, self.dest_x, self.dest_y)):
+                self.x = across_x
+                self.y = across_y
+                temp = (self.x, self.y)
+                self.pass_road.append(temp)
+                self.x = target_x
+                self.y = target_y
+                temp = (self.x, self.y)
+                self.pass_road.append(temp)
+                return True
+            else:
+                return False
         return False
 
     def stop_the_car(self):
         self.flag = 0
 
     def start_the_car(self):
+        self.get_dest(1, 3)
+        self.move(self.dest_x, self.dest_y)
+        time.sleep(20)
+        self.pass_road = []
+        self.get_dest(5, 20)
         self.flag = 1
+        self.move(self.dest_x, self.dest_y)
+        sys.exit()
 
     def run(self):
-        self.move(self.dest_x, self.dest_y)
+        if self.index == 1:
+            self.start_the_car()
+            self.index = 0
+        else:
+            self.move(self.dest_x, self.dest_y)
+            sys.exit()
