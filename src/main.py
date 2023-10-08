@@ -1,6 +1,7 @@
 from car import Car
 from map import Map
 import os
+import time
 
 
 def create_map() -> Map:
@@ -12,26 +13,32 @@ def create_map() -> Map:
 
 
 def sigle_car_test(map: Map):
-    car_x = 2
-    car_y = 16
-    car = Car(car_x, car_y, map)
+    Entrance_x = 0
+    Entrance_y = 0
+    car_x = 0
+    car_y = 1
+    car = Car(car_x, car_y, map, Entrance_x, Entrance_y)
     dest_x = 11
     dest_y = 16
-    car.move(dest_x, dest_y)
+    car.manage_move(dest_x, dest_y)
 
 
 def mul_car_test(map: Map):
-    car_x = 0
+    Entrance_x = 0
+    Entrance_y = 0
+    car_x = 1
     car_y = 0
     dest_x = 5
     dest_y = 18
     car_threads = []
-    for i in range(7):
-        car_thread = Car(car_x, car_y, map)
+    for i in range(4):
+        car_thread = Car(car_x, car_y, map, Entrance_x, Entrance_y)
+        car_thread.index = i
         car_thread.get_dest(dest_x, dest_y)
         car_thread.start()
         car_threads.append(car_thread)
         map.cars.append(car_thread)
+        time.sleep(3)
     # wait all thread to finish the task
     for car_thread in car_threads:
         car_thread.join()
