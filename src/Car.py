@@ -77,12 +77,14 @@ class Car(threading.Thread):
 
     def add_position(self):
         """
-        Show the position of the car
+        Add the position of the car to the postion list
         """
-        # print(f"({self.x}, {self.y})", end=" ", flush=True)
         self.pass_road.append((self.x, self.y))
 
     def stop_the_car(self):
+        """
+        Stop the car and print the pass road
+        """
         with self.lock:
             print(str(threading.get_ident()) + " Destination reached!")
             print("The car pass the road is:", end=" ")
@@ -101,14 +103,20 @@ class Car(threading.Thread):
         """
         return (self.x, self.y) == (self.dest_x, self.dest_y)
 
-    def placeHolder_parking(self, parking_x, parking_y):
+    def set_parking(self, parking_x, parking_y):
         """
-        Check if the car has reached the destination
-        Return:
-            bool: if the car has reached the destination
+        Set the car parking position
+        Args:
+            parking_x : parking x coordinate
+            parking_y : parking y coordinate
         """
-        if (self.map.layout.iloc[parking_x + 1, parking_y] == 1):
-            pass
+        if (self.map.layout.iloc[parking_x, parking_y] == 1):
+            if (self.map.layout.iloc[parking_x - 1, parking_y] == 1):
+                self.map.layout.iloc[parking_x, parking_y] = -1
+                self.map.layout.iloc[parking_x - 1, parking_y] = -1
+            elif (self.map.layout.iloc[parking_x + 1, parking_y] == 1):
+                self.map.layout.iloc[parking_x, parking_y] = -1
+                self.map.layout.iloc[parking_x + 1, parking_y] = -1
 
     def drive_to_parking(self):
         while self.x != self.dest_x or self.y != self.dest_y:
@@ -126,6 +134,7 @@ class Car(threading.Thread):
                 self.pre_y = self.y
                 self.drive()
                 self.add_position()
+                self.set_parking(self.x, self.y)
                 break
             else:
                 self.solve_collision(result[1])   # 如果解决 下次检测就不会冲突
@@ -133,12 +142,8 @@ class Car(threading.Thread):
 
     def drive_to_temp_dest(self):
         while self.x != self.temp_dest_x or self.y != self.temp_dest_y:
-            # print(self.x, self.y)
-            # print(self.temp_dest_x, self.temp_dest_y)
             self.map.assign_car_direction(self, self.temp_dest_x, self.temp_dest_y)
             result = self.check_collision()
-            # if (self.index == 2):
-            #     print(result)
             if result[0] is False:
                 self.pre_x = self.x
                 self.pre_y = self.y
@@ -315,11 +320,13 @@ class Car(threading.Thread):
         elif car_flag == 1 and self.map.layout.iloc[car_x, car_y] == 0:
             return False
         else:
-            # print(self.pass_road)
-            result = self.map.get_closest_parking(car_x, car_y)
+            find_direction = self.map.get_road_direction(self.x, self.y)
+            result = self.map.get_closest_parking(car_x, car_y, find_direction)
+            if (result[0] == -9):
+                print("no parking")
+                return False
             self.get_dest(result[0], result[1])
             self.get_temp_dest(self.dest_x, self.dest_y)
-            # print(self.dest_x, self.dest_y)
             return True
 
     def set_temp_parking(self, parking_x, parking_y):
@@ -330,12 +337,11 @@ class Car(threading.Thread):
         self.y = parking_y
         self.flag = 0
         print(str(threading.get_ident()) + " Temporary parking ok!")
-        # print(self.x, self.y)
         while True:
             time.sleep(100)
 
     def run(self):
-        if (self.index == 1):
+        if (self.index == 10):
             self.set_temp_parking(4, 15)
         else:
             self.manage_move(self.dest_x, self.dest_y)

@@ -28,10 +28,10 @@ def mul_car_test(map: Map):
     Entrance_y = 0
     car_x = 1
     car_y = 0
-    dest_x = 2
-    dest_y = 16
+    dest_x = 5
+    dest_y = 18
     car_threads = []
-    for i in range(3):
+    for i in range(4):
         car_thread = Car(car_x, car_y, map, Entrance_x, Entrance_y)
         car_thread.index = i
         car_thread.get_dest(dest_x, dest_y)

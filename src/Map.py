@@ -40,6 +40,24 @@ class Map:
                 return True
         return False
 
+    def get_road_direction(self, x, y) -> int:
+        """
+        Get the road (x,y) direction
+        Args:
+            x : x coordinate
+            y : y coordinate
+        Returns:
+            int: road direction
+        """
+        if y in self.upcolumn:
+            return 1
+        elif y in self.downcolumn:
+            return 2
+        elif x in self.leftrow:
+            return 3
+        elif x in self.rightrow:
+            return 4
+
     def get_parking_space_wide_height(self) -> tuple:
         """
         Get the wide and height of a parking space
@@ -113,51 +131,44 @@ class Map:
         while True:
             if self.layout.iloc[dest_x, dest_y] == 0:
                 return (dest_x, dest_y)
-            elif self.layout.iloc[dest_x, dest_y - i] == 0:
-                return (dest_x, dest_y - i)
-            elif self.layout.iloc[dest_x, dest_y + i] == 0:
-                return (dest_x, dest_y + i)
             elif self.layout.iloc[dest_x - i, dest_y] == 0:
-                return (dest_x - i, dest_y)
-            elif self.layout.iloc[dest_x - i, dest_y + i] == 0:
-                return (dest_x - i, dest_y + i)
-            elif self.layout.iloc[dest_x - i, dest_y - i] == 0:
                 return (dest_x - i, dest_y)
             elif self.layout.iloc[dest_x + i, dest_y] == 0:
                 return (dest_x + i, dest_y)
-            elif self.layout.iloc[dest_x + i, dest_y - i] == 0:
-                return (dest_x + i, dest_y - i)
-            elif self.layout.iloc[dest_x + i, dest_y + i] == 0:
-                return (dest_x + i, dest_y + i)
             i += 1
+        # just up or down
 
-    def get_closest_parking(self, target_x, target_y) -> tuple:
+    def get_closest_parking(self, target_x, target_y, find_direction) -> tuple:
         """
         Get the closest parking to the target
             x : target x coordinate
             y : target y coordinate
+            find_direction: find closest parking direction
         Returns:
             tuple: the parking (x,y) to the target (target_x,target_y)
+            when no parking return (-9,-9)
         """
         i = 1
         while True:
-            if self.layout.iloc[target_x, target_y - i] == 1 and not self.check_car(target_x, target_y - i):
-                return (target_x, target_y - i)
-            elif self.layout.iloc[target_x, target_y + i] == 1 and not self.check_car(target_x, target_y + i):
-                return (target_x, target_y + i)
-            elif self.layout.iloc[target_x - i, target_y] == 1 and not self.check_car(target_x - i, target_y):
-                return (target_x - i, target_y)
-            elif self.layout.iloc[target_x - i, target_y + i] == 1 and not self.check_car(target_x - i, target_y + i):
-                return (target_x - i, target_y + i)
-            elif self.layout.iloc[target_x - i, target_y + i] == 1 and not self.check_car(target_x - i, target_y - i):
-                return (target_x - i, target_y + i)
-            elif self.layout.iloc[target_x + i, target_y] == 1 and not self.check_car(target_x + i, target_y):
-                return (target_x + i, target_y)
-            elif self.layout.iloc[target_x + i, target_y + i] == 1 and not self.check_car(target_x + i, target_y + i):
-                return (target_x + i, target_y + i)
-            elif self.layout.iloc[target_x + i, target_y - i] == 1 and not self.check_car(target_x + i, target_y - i):
-                return (target_x + i, target_y - i)
+            if (target_y - i < 0 or target_y + i >= len(self.layout.columns)):
+                return (-9,-9)
+            if (i > 10):
+                return (-9,-9)
+            if (find_direction == 3):
+                if self.layout.iloc[target_x, target_y - i] == 1:
+                    return (target_x, target_y - i)
+            if (find_direction == 4):
+                if self.layout.iloc[target_x, target_y + i] == 1:
+                    return (target_x, target_y + i)
             i += 1
+        # 3: left, 4: right
+        # according to the find_direction to find a parking
+        # find limit is 10 only y±i 
+        # eixt when find a parking or limit or out of range
+        # when parking has a car and position == -1
+        # when road position == 0
+        # when parking position == 1
+        # when no parking return (-9,-9)
 
     def assign_car_direction(self, car, dest_x, dest_y):
         """
@@ -172,9 +183,7 @@ class Map:
         # pre_x = car.pre_x
         # pre_y = car.pre_y
 
-        # 不会触发 已经重写停车场内逻辑
         if self.layout.iloc[x, y] != 0:
-            print("车辆在停车位内")
             x, y = self.get_closest_road(x, y)
             if x < car.x:
                 car.direction = 1
