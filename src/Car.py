@@ -50,10 +50,10 @@ class Car(threading.Thread):
         Args:
             dest_x : destination x coordinate
             dest_y : destination y coordinate
-            Returns:
+        Returns:
                 tuple: destination x and y coordinate
         """
-        if (self.map.layout.iloc[self.dest_x, self.dest_x] == 1):
+        if (self.map.layout.iloc[self.dest_x, self.dest_y] == 1):
             self.temp_dest_x, self.temp_dest_y = self.map.get_closest_road(self.dest_x, self.dest_y)
         else:
             self.temp_dest_x, self.temp_dest_y = self.dest_x, self.dest_y
@@ -61,7 +61,7 @@ class Car(threading.Thread):
 
     def drive(self):
         """
-        Move the car
+        Move the car and change the position
         """
         if self.direction == 1:  # Move up
             self.x -= 1
@@ -93,6 +93,9 @@ class Car(threading.Thread):
                 time.sleep(100)
 
     def start_the_car(self):
+        """
+        Before the car start to do some work 
+        """
         self.flag = 1
 
     def check_dest_position(self):
@@ -119,6 +122,9 @@ class Car(threading.Thread):
                 self.map.layout.iloc[parking_x + 1, parking_y] = -1
 
     def drive_to_parking(self):
+        """
+        When car is next to 1 to the parking_dest, then drive to the parking_dest
+        """
         while self.x != self.dest_x or self.y != self.dest_y:
             if self.dest_x < self.x:
                 self.direction = 1
@@ -128,7 +134,7 @@ class Car(threading.Thread):
                 self.direction = 3
             elif self.dest_y > self.y:
                 self.direction = 4
-            result = self.check_collision()
+            result = self.check_conflict()
             if result[0] is False:
                 self.pre_x = self.x
                 self.pre_y = self.y
@@ -137,27 +143,36 @@ class Car(threading.Thread):
                 self.set_parking(self.x, self.y)
                 break
             else:
-                self.solve_collision(result[1])   # 如果解决 下次检测就不会冲突
+                self.solve_conflict(result[1])   # 如果解决 下次检测就不会冲突
                 self.drive_to_temp_dest()
 
     def drive_to_temp_dest(self):
+        """
+        The car drive to the temp dest
+        """
         while self.x != self.temp_dest_x or self.y != self.temp_dest_y:
             self.map.assign_car_direction(self, self.temp_dest_x, self.temp_dest_y)
-            result = self.check_collision()
+            result = self.check_conflict()
             if result[0] is False:
                 self.pre_x = self.x
                 self.pre_y = self.y
                 self.drive()
                 self.add_position()
             else:
-                self.solve_collision(result[1])   # 如果解决 下次检测就不会冲突
+                self.solve_conflict(result[1])   # 如果解决 下次检测就不会冲突
 
     def drive_out_parking(self):
+        """
+        The car drive out the parking
+        """
         pass
 
     def manage_move(self, dest_x, dest_y):
         """
         Manage the car move to the position
+        Args:
+            dest_x : destination x coordinate
+            dest_y : destination y coordinate
         """
         self.start_the_car()  # 车辆启动
         self.get_dest(dest_x, dest_y)
@@ -166,13 +181,14 @@ class Car(threading.Thread):
         self.drive_to_parking()
         self.stop_the_car()
 
-    def check_collision(self) -> tuple:
+    def check_conflict(self) -> tuple:
         """
-        Check if there is a collision
+        Check if there is a conflict
         Returns:
             tuple: conflict(bool) and conflicting vehicles(car)
         """
-        # if ahead self direction have a car , then solve the collision
+        # if ahead self direction have a car , then solve the conflict
+        have_conflict = False
         self.ahead_x = 0
         self.ahead_y = 0
         if self.direction == 1:  # Move up
@@ -189,12 +205,49 @@ class Car(threading.Thread):
             self.ahead_y = self.y + 1
         for car in self.map.cars:
             if (car.x, car.y) == (self.ahead_x, self.ahead_y) and car != self:
-                return (True, car)
-        return (False, None)
+                have_conflict = True
+                return (have_conflict, car) # just here return the car
+        # --------------------------------------------------------------------------------------
+        if self.direction == 3:  # 左行过路口时，第一次检测下方是否有来车，如果还要左行，则检测上方是否有来车。
+            if self.map.layout.iloc[self.x][self.y - 1] in self.map.upcolumn:
+                if (self.map.layout.iloc[self.x + 1][self.y - 1] in self.map.cars):
+                    have_conflict = False
+                else:
+                    have_conflict = True
+            if self.map.layout.iloc[self.x][self.y - 1] in self.map.downcolumn:
+                if self.map.layout.iloc[self.x - 1][self.y - 1] in self.map.cars:
+                    have_conflict = False
+                else:
+                    have_conflict = True
+        if self.direction == 4:  # 右行过路口时，第一次检测上方是否有来车，如果还要右行，则检测下方是否有来车。
+            if self.map.layout.iloc[self.x][self.y + 1] in self.map.upcolumn:
+                if self.map.layout.iloc[self.x + 1][self.y + 1] in self.map.cars:
+                    have_conflict = False
+                else:
+                    have_conflict = True
+            if self.map.layout.iloc[self.x][self.y + 1] in self.map.downcolumn:
+                if self.map.layout.iloc[self.x - 1][self.y + 1] in self.map.cars:
+                    have_conflict = False
+                else:
+                    have_conflict = True
+        if self.map.layout.iloc == 3 and self.x + 1 == self.temp_dest_x and self.y == self.dest_y and \
+                self.map.layout.iloc[self.dest_x, self.dest_y] == 1:  # 车辆左行时，停车位在temp下方1格时，触发检测函数
+            if self.map.layout.iloc[self.x + 1][self.y] in self.map.cars:
+                have_conflict = False
+            else:
+                have_conflict = True
+                self.direction = 2
+        if self.direction == 4 and self.x - 1 == self.temp_dest_x and self.y == self.dest_y and self.map.layout.iloc[self.dest_x, self.dest_y] == 1:  # 车辆右行时，停车位在temp上方1格时，触发检测函数
+            if self.map.layout.iloc[self.x - 1][self.y] in self.map.cars:
+                have_conflict = False
+            else:
+                have_conflict = True
+                self.direction = 1
+        return (have_conflict, None)
 
-    def solve_collision(self, car):
+    def solve_conflict(self, car) -> bool:
         """
-        Try to solve the collision
+        Try to solve the conflict
         Args:
             car : the car to overtake
         Returns:
@@ -204,7 +257,10 @@ class Car(threading.Thread):
         car_y = car.y
         car_flag = car.flag
         # print(car_x, car_y, car_flag)
-        if car_flag == 0 and self.map.layout.iloc[car_x, car_y] == 0:
+        if car is None:
+            time.sleep(2)
+            return False
+        elif car_flag == 0 and self.map.layout.iloc[car_x, car_y] == 0:
             if self.direction == 1:
                 # 寻找可超越路径
                 has_car = 0
@@ -332,6 +388,9 @@ class Car(threading.Thread):
     def set_temp_parking(self, parking_x, parking_y):
         """
         Set the temporary parking position
+        Args:
+            parking_x : parking x coordinate
+            parking_y : parking y coordinate
         """
         self.x = parking_x
         self.y = parking_y
