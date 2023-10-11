@@ -1,4 +1,5 @@
 import pandas as pd
+# import time
 
 
 class Map:
@@ -151,9 +152,9 @@ class Map:
         i = 1
         while True:
             if (target_y - i < 0 or target_y + i >= len(self.layout.columns)):
-                return (-9,-9)
+                return (-9, -9)
             if (i > 10):
-                return (-9,-9)
+                return (-9, -9)
             if (find_direction == 3):
                 if self.layout.iloc[target_x, target_y - i] == 1:
                     return (target_x, target_y - i)
@@ -163,7 +164,7 @@ class Map:
             i += 1
         # 3: left, 4: right
         # according to the find_direction to find a parking
-        # find limit is 10 only y±i 
+        # find limit is 10 only y±i
         # eixt when find a parking or limit or out of range
         # when parking has a car and position == -1
         # when road position == 0
@@ -172,7 +173,7 @@ class Map:
 
     def assign_car_direction(self, car, dest_x, dest_y):
         """
-        Get vehicle driving direction
+        Get vehicle driving direction accroding to the road direction
         Args:
             car : Car object
             dest_x : destination x coordinate
@@ -182,34 +183,22 @@ class Map:
         y = car.y
         # pre_x = car.pre_x
         # pre_y = car.pre_y
-
-        if self.layout.iloc[x, y] != 0:
-            x, y = self.get_closest_road(x, y)
-            if x < car.x:
-                car.direction = 1
-            elif x > car.x:
-                car.direction = 2
-            elif y < car.y:
-                car.direction = 3
-            elif y > car.y:
-                car.direction = 4
+        if (x, y) in self.cross:
+            self.cross_direction(car, dest_x, dest_y)
+        elif x in self.leftrow:
+            car.direction = 3  # Move left
+            car.pre_direction = 0
+        elif x in self.rightrow:
+            car.direction = 4  # Move right
+            car.pre_direction = 0
+        elif y in self.downcolumn:
+            car.direction = 2  # Move down
+            car.pre_direction = 0
+        elif y in self.upcolumn:
+            car.direction = 1  # Move up
+            car.pre_direction = 0
         else:
-            if (x, y) in self.cross:
-                self.cross_direction(car, dest_x, dest_y)
-            elif x in self.leftrow:
-                car.direction = 3  # Move left
-                car.pre_direction = 0
-            elif x in self.rightrow:
-                car.direction = 4  # Move right
-                car.pre_direction = 0
-            elif y in self.downcolumn:
-                car.direction = 2  # Move down
-                car.pre_direction = 0
-            elif y in self.upcolumn:
-                car.direction = 1  # Move up
-                car.pre_direction = 0
-            else:
-                print("无法为车辆分配有效标志")
+            print("无法为车辆分配有效标志")
 
     def cross_direction(self, car, dest_x, dest_y):
         x = car.x
@@ -219,7 +208,7 @@ class Map:
         car.direction = 0  # 之前没有置0
         # 这里h是每一个停车区域块的高度，w是其宽度，为防止绕一圈（绕路）的情况
         if pre_y in self.upcolumn:  # 是否在上行列，这边在上行列，就没有给他分配往下行列走的可能，所以不会掉头
-            if dest_x < x-self.height:  # 保证上行的时候可以一直上行一个停车场区域高度以上
+            if dest_x < x - self.height:  # 保证上行的时候可以一直上行一个停车场区域高度以上
                 if x - 2 >= 0:  # 防止这是停车场最上面那个路口，向上会走出停车场
                     car.direction = 1  # 如果已经在上行列，直接向上
                     car.pre_direction = 1
@@ -280,7 +269,7 @@ class Map:
                         car.direction = 2
                         car.pre_direction = 3
         elif pre_x in self.rightrow:
-            if dest_y > y+self.wide:  # 如果已经在右行行，则判断往右行能不能向右一直走一个区域，和上面一样，是防止绕路的
+            if dest_y > y + self.wide:  # 如果已经在右行行，则判断往右行能不能向右一直走一个区域，和上面一样，是防止绕路的
                 if y + 2 < len(self.layout):
                     car.direction = 4  # 如果已经在下行列，直接向下移动
                     car.pre_direction = 4
@@ -313,7 +302,6 @@ class Map:
                 if y - 2 > -1:
                     car.direction = 3  # 如果已经在下行列，直接向下移动
                     car.pre_direction = 3
-
             elif dest_x > x:
                 if x + 2 < len(self.layout):
                     if y in self.downcolumn:

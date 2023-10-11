@@ -12,15 +12,29 @@ def create_map() -> Map:
     return map
 
 
-def sigle_car_test(map: Map):
+def create_temp_parking(map: Map):
+    pre_x = 12
+    pre_y = 18
+    car_x = 12
+    car_y = 17
+    car = Car(car_x, car_y, map, pre_x, pre_y)
+    # 或许不需要,一上来没启动就是临时停车
+    car.set_temp_parking(car_x, car_y, pre_x, pre_y)
+    map.cars.append(car)
+
+
+def single_car_test(map: Map):
     Entrance_x = 0
     Entrance_y = 0
-    car_x = 0
-    car_y = 1
+    car_x = 1
+    car_y = 0
     car = Car(car_x, car_y, map, Entrance_x, Entrance_y)
+    map.cars.append(car)
     dest_x = 11
     dest_y = 16
     car.manage_move(dest_x, dest_y)
+    create_temp_parking(map)
+    car.manage_move(5, 16)
 
 
 def mul_car_test(map: Map):
@@ -31,7 +45,7 @@ def mul_car_test(map: Map):
     dest_x = 5
     dest_y = 18
     car_threads = []
-    for i in range(4):
+    for i in range(2):
         car_thread = Car(car_x, car_y, map, Entrance_x, Entrance_y)
         car_thread.index = i
         car_thread.get_dest(dest_x, dest_y)
